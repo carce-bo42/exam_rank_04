@@ -74,7 +74,10 @@ void	dup_fd(int fd, int io)
 void	ft_cd(char **av)
 {
 	if (av[2])
+	{
 		num_arg_error();
+		return ;
+	}
 	else
 	{
 		if (chdir(av[1]) == -1)
@@ -139,11 +142,14 @@ void	call_execve(char **av, int n_proc)
  * es el que lo tiene a la izq. El primer y ultimo proceso son asimetricos.
  * NUNCA NUNCA NUNCA se utiliza [1] del old_pipe ni [0] del new_pipe.
  *
- * ESQUEMA PROCESOS:
+ *
+ * 							ESQUEMA PROCESOS:
+ *
  *
  *    	  NEW   OLD              NEW   OLD             NEW   OLD          NEW
- *   	X [0] | [1] X          X [0] | [1]           X [0] | [1] X      X [0]
+ *   	X [0] | [1] X          X [0] | [1] X         X [0] | [1] X      X [0]
  *  -OUT->[1] | [0]-IN->   -OUT->[1] | [0]-IN->	 -OUT->[1] | [0]-IN->   X [1]
+ *
  * */
 void	manage_cmd_line(char **av)
 {
@@ -163,15 +169,12 @@ void	manage_cmd_line(char **av)
 	{
 		while (current_proc++ < n_proc)
 		{
-			current_cmd = next_cmd;
-			i = next_cmd;
+			current_cmd = i;
 			while (av[i])
 			{
 				if (!strcmp(av[i], "|"))
 				{
-					*(av[i]) = '\0';
-					av[i] = NULL;
-					next_cmd = i + 1;
+					av[i++] = NULL;
 					break ;
 				}
 				i++;
@@ -197,10 +200,10 @@ void	manage_cmd_line(char **av)
 				close_fd(new_pipe[1]);
 				if (current_proc != 1)
 					close_fd(old_pipe[0]);
-				if (current_proc == n_proc)
-					close_fd(new_pipe[0]);
-				else
+				if (current_proc != n_proc)
 					old_pipe[0] = new_pipe[0];
+				else
+					close_fd(new_pipe[0]);
 			}
 		}
 		while (n_proc-- > 0)
@@ -210,18 +213,16 @@ void	manage_cmd_line(char **av)
 
 int	main(int ac, char **av, char **env)
 {
-	int	i = 0;
+	int	i = 1;
 	int	cmd_start = 1;
 
 	if (ac > 1)
 	{
 		env_ptr = env;
-		i = 1;
 		while (av[i])
 		{
 			if (!strcmp(av[i], ";"))
 			{
-				*(av[i]) = '\0';
 				av[i] = NULL;
 				manage_cmd_line(av + cmd_start);
 				cmd_start = i + 1;
